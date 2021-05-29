@@ -11,8 +11,10 @@ class binary_crossentropy:
     Y: m*1 dimensional numpy array, m=number of datapoints
         True class of each data point
     """
-    def calculateLoss(self, h, Y):
+    def calculateLoss(self, h, Y, layers):
         l = (-Y * np.log(h) - (1-Y) * np.log(1-h)).mean()
+        for layer in layers:
+            l += layer.regularizer.calculateCost(layer.W)
         return l
     
     """
