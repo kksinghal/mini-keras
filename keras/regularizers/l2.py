@@ -17,4 +17,4 @@ class l2:
         return self.lambd * np.dot(W.T, W).mean() / 2 
         
     def calculateDerivative(self, W):
-        return (self.lambd / W.shape[1])* np.sum(W, axis=1, keepdims=True)
+        return self.lambd* np.sum(W, axis=1, keepdims=True)

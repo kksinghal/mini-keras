@@ -10,6 +10,12 @@ Build my own neural network library
 ### Layers
 - Dense Layer
 
+### Optimizers
+- gradient_descent
+- gradient_descent_with_momentum
+- adam
+
+
 ### Activations
 - Sigmoid
 - RELU
@@ -17,5 +23,10 @@ Build my own neural network library
 
 ### Loss
 - binary_crossentropy
+
+### Regularizer
+- l2
+- dropouts
+
 
 
