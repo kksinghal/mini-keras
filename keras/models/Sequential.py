@@ -37,12 +37,12 @@ class Sequential:
             if activation_name == "relu":
                 self.layers[i].W = np.random.randn(self.layers[i].n_units, self.layers[i-1].n_units)* \
                                                                             np.sqrt(2/n_units_in_prev_layer)
-                
+            
             elif activation_name == "sigmoid":
                 self.layers[i].W = np.random.randn(self.layers[i].n_units, self.layers[i-1].n_units) * \
                                                                             np.sqrt(1/n_units_in_prev_layer)
                 
-            elif activation_name == "linear":
+            else:
                 self.layers[i].W = np.random.randn(self.layers[i].n_units, self.layers[i-1].n_units)
                 
             self.layers[i].b = np.zeros((self.layers[i].n_units, 1))
@@ -50,6 +50,9 @@ class Sequential:
         if loss == "binary_crossentropy":
             from keras.losses.binary_crossentropy import binary_crossentropy
             self.loss = binary_crossentropy()
+        elif loss == "categorical_crossentropy":
+            from keras.losses.categorical_crossentropy import categorical_crossentropy
+            self.loss = categorical_crossentropy()
             
         if optimizer == 'gradient_descent':
             from keras.optimizers.gradient_descent import gradient_descent
@@ -125,7 +128,7 @@ class Sequential:
                 else:
                     X_mini = X[:, range(batch_size*j,n_training_pts)]
                     Y_mini = Y[:, range(batch_size*j, n_training_pts)]
-                #print(X_mini.shape)
+                    
                 #a = output of last layer, A = list of activations of each layer
                 a, A = self.forward_propagation(X_mini)
                 dW, db = self.compute_gradients(Y_mini, A)

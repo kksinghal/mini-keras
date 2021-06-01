@@ -32,7 +32,12 @@ class Dense:
             from keras.activations.relu import relu
             self.activation_name = "relu"
             self.activation = relu()
-            
+        
+        elif activation == "softmax":
+            from keras.activations.softmax import softmax
+            self.activation_name = "softmax"
+            self.activation = softmax()
+        
         elif activation == "sigmoid":
             from keras.activations.sigmoid import sigmoid
             self.activation_name = "sigmoid"

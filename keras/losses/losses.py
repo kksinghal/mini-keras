@@ -1,1 +1,2 @@
+from .categorical_crossentropy import categorical_crossentropy
 from .binary_crossentropy import binary_crossentropy

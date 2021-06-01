@@ -1,6 +1,6 @@
 import numpy as np
 
-class binary_crossentropy:
+class categorical_crossentropy:
     """
     calculateLoss
     --------------
@@ -12,7 +12,7 @@ class binary_crossentropy:
         True class of each data point
     """
     def calculateLoss(self, h, Y, layers):
-        l = ((-Y * np.log(h)) - ((1-Y) * np.log(1-h))).mean()
+        l = np.mean(np.sum( np.multiply(-Y, np.log(h)) - np.multiply(1-Y, np.log(1-h)), axis=0))
         for layer in layers:
             l += layer.regularizer.calculateCost(layer.W)
         return l

@@ -20,9 +20,11 @@ Build my own neural network library
 - Sigmoid
 - RELU
 - Linear
+- softmax
 
 ### Loss
 - binary_crossentropy
+- categorical_crossentropy
 
 ### Regularizer
 - l2
