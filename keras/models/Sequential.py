@@ -27,26 +27,13 @@ class Sequential:
         self.learning_rate = learning_rate
         
         np.random.seed(0)
-        #initialise weights
-        for i in range(1, len(self.layers)):
-            activation_name = self.layers[i].activation_name
-            # Check in case someone applies activation on input layer
-            if i>0:
-                n_units_in_prev_layer = self.layers[i-1].n_units
-                
-            if activation_name == "relu":
-                self.layers[i].W = np.random.randn(self.layers[i].n_units, self.layers[i-1].n_units)* \
-                                                                            np.sqrt(2/n_units_in_prev_layer)
-            
-            elif activation_name == "sigmoid":
-                self.layers[i].W = np.random.randn(self.layers[i].n_units, self.layers[i-1].n_units) * \
-                                                                            np.sqrt(1/n_units_in_prev_layer)
-                
-            else:
-                self.layers[i].W = np.random.randn(self.layers[i].n_units, self.layers[i-1].n_units)
-                
-            self.layers[i].b = np.zeros((self.layers[i].n_units, 1))
         
+        #initialise weights
+        input_size = self.layers[0].input_size
+        #input_size = [int(i) for i in input_size]
+        for i in range(self.n_layers):
+            input_size = self.layers[i].initialise_weights(input_size)
+
         if loss == "binary_crossentropy":
             from keras.losses.binary_crossentropy import binary_crossentropy
             self.loss = binary_crossentropy()
@@ -64,46 +51,6 @@ class Sequential:
             from keras.optimizers.adam import adam
             self.optimizer = adam() 
         
-            
-            
-    def forward_propagation(self, X):
-        #a = output of current layer
-        a = X
-        # A: list of activations of each layer
-        A = [X] # Activation of 0th layer is input feature vector
-        for i in range(1, self.n_layers):
-            keep_prob = self.layers[i].keep_prob
-            self.layers[i].active_neurons = np.random.choice([1,0], size=(self.layers[i].n_units,1), p=[keep_prob, 1-keep_prob])
-            z = np.dot(self.layers[i].W, a) + self.layers[i].b
-            a = self.layers[i].activation.activate(z)
-            A.append(a)
-            a = np.multiply(a, self.layers[i].active_neurons)
-        
-        return a, A
-    
-    def compute_gradients(self, Y, A):
-
-        activation_prev_layer = A[self.n_layers - 1]
-
-        dz = np.multiply(self.loss.derivative(activation_prev_layer, Y), \
-                         self.layers[self.n_layers - 1].activation.derivative(activation_prev_layer))
-        # List of gradients of all W starting from last layer to first
-        dW = []
-        # List of gradients of all b starting from last layer to first
-        db = []
-        for i in range(self.n_layers-1, 0, -1):
-            activation_prev_layer = A[i - 1]
-            dWi = np.dot(dz, activation_prev_layer.T) + self.layers[i].regularizer.calculateDerivative(self.layers[i].W)
-            dW.append(dWi)
-            
-            dbi = dz.sum(axis=1, keepdims=True)
-            db.append(dbi)
-
-            dz = np.multiply(np.dot(self.layers[i].W.T, dz), \
-                             self.layers[i - 1].activation.derivative(activation_prev_layer))
-            
-        return dW, db
-    
     """
     X: n*m numpy array, n=number of features, m=number of data points
     Y: Ny*m numpy array, Ny= number of output units, m = number of data points
@@ -123,31 +70,51 @@ class Sequential:
             n_batches = int(np.ceil([n_training_pts / batch_size])[0])
             for j in range(n_batches):
                 if batch_size*(j+1) < n_training_pts:
-                    X_mini = X[:, range(batch_size*j, batch_size*(j+1))]
-                    Y_mini = Y[:, range(batch_size*j, batch_size*(j+1))]
+                    X_mini = X[..., range(batch_size*j, batch_size*(j+1))]
+                    Y_mini = Y[..., range(batch_size*j, batch_size*(j+1))]
                 else:
-                    X_mini = X[:, range(batch_size*j,n_training_pts)]
-                    Y_mini = Y[:, range(batch_size*j, n_training_pts)]
-                    
-                #a = output of last layer, A = list of activations of each layer
-                a, A = self.forward_propagation(X_mini)
-                dW, db = self.compute_gradients(Y_mini, A)
-                self.optimizer.update_weights(self.layers, dW, db, self.learning_rate)
-
+                    X_mini = X[..., range(batch_size*j,n_training_pts)]
+                    Y_mini = Y[..., range(batch_size*j, n_training_pts)]
                 
-                train_output, _ = self.forward_propagation(X_mini)
+                a = X_mini
+                for k in range(self.n_layers):
+                    a = self.layers[k].forward_propagation(a)#also store activation in layer for case of dense layer
+                    
+                
+                dz = np.multiply(self.loss.derivative(a, Y), \
+                         self.layers[self.n_layers - 1].activation.derivative(a))
+                
+                for k in range(self.n_layers-1, -1, -1):
+                    if k>0:
+                        activation_prev_layer = self.layers[k-1].A
+                        activation_derivative_prev_layer = self.layers[k-1].activation.derivative(activation_prev_layer)
+                    else:
+                        activation_prev_layer = X_mini
+                        activation_derivative_prev_layer = 1
+                        
+                    # update the weights and return the new dz
+                    # A is activation of a layer stored in layer object
+                    dz = self.layers[k].backward_propagation(dz, activation_prev_layer \
+                                                        , activation_derivative_prev_layer, self.learning_rate) 
+                    
+                
+                    
+                
+                train_output = a
 
                 self.history["train_loss"] = np.append(self.history["train_loss"]\
-                                    , self.loss.calculateLoss(train_output, Y_mini, self.layers[1:]))
+                                    , self.loss.calculateLoss(train_output, Y_mini, self.layers))
                 if X_val.size != 0:
-                    val_output, _ = self.forward_propagation(X_val)
-                    self.history["val_loss"] = np.append(self.history["val_loss"]\
-                                    ,self.loss.calculateLoss(val_output, Y_val, self.layers[1:]))
+                    val_output = X_val
+                    for i in range(0, self.n_layers):
+                        val_output = self.layers[i].forward_propagation(val_output)
 
-        
+                    self.history["val_loss"] = np.append(self.history["val_loss"]\
+                                    ,self.loss.calculateLoss(val_output, Y_val, self.layers))
+
+
     def predict(self, X):
         a = X
-        for i in range(1, self.n_layers):
-            z = np.dot(self.layers[i].W, a) + self.layers[i].b
-            a = self.layers[i].activation.activate(z)  
+        for i in range(self.n_layers):
+            a = self.layers[i].predict(a) 
         return a
